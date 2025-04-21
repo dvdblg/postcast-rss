@@ -14,6 +14,22 @@ from .exceptions import PodcastException
 LOG = setup_logging(__name__)
 
 
+def read_subscription_cache() -> Optional[IlPostUserMetadata]:
+    """Read the subscription cache from the file."""
+    # Make sure the directory exists
+    settings.ILPOST_SUBSCRIPTION_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(settings.ILPOST_SUBSCRIPTION_CACHE_FILE, "r") as f:
+        return IlPostUserMetadata.model_validate_json(f.read())
+
+
+def write_subscription_cache(subscription_cache: IlPostUserMetadata):
+    """Write the subscription cache to the file."""
+    # Make sure the directory exists
+    settings.ILPOST_SUBSCRIPTION_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(settings.ILPOST_SUBSCRIPTION_CACHE_FILE, "w") as f:
+        f.write(subscription_cache.model_dump_json(indent=4))
+
+
 class IlPostApi:
     """Client for interacting with Il Post API.
 
@@ -64,14 +80,11 @@ class IlPostApi:
         Authenticate with the API and fetch the subscription data.
         """
         try:
-            with open(settings.ILPOST_SUBSCRIPTION_CACHE_FILE, "r") as f:
-                self._subscription_cache = IlPostUserMetadata.model_validate_json(
-                    f.read()
-                )
-                if self._subscription_cache.subscription.is_expired:
-                    os.remove(settings.ILPOST_SUBSCRIPTION_CACHE_FILE)
-                    raise PodcastException("Subscription expired")
-                LOG.info("Found valid subscription cache, using it.")
+            self._subscription_cache = read_subscription_cache()
+            if self._subscription_cache.subscription.is_expired:
+                os.remove(settings.ILPOST_SUBSCRIPTION_CACHE_FILE_NAME)
+                raise PodcastException("Subscription expired")
+            LOG.info("Found valid subscription cache, using it.")
         except (FileNotFoundError, ValueError, PodcastException):
             LOG.info("No valid subscription cache found, logging in.")
             response = requests.post(
@@ -92,8 +105,7 @@ class IlPostApi:
                 user = IlPostUser.model_validate(data)
                 self._subscription_cache = user.profile.meta
                 LOG.info("Logged in successfully.")
-                with open(settings.ILPOST_SUBSCRIPTION_CACHE_FILE, "w") as f:
-                    f.write(self._subscription_cache.model_dump_json(indent=4))
+                write_subscription_cache(self._subscription_cache)
             except (requests.HTTPError, ValueError) as e:
                 raise PodcastException(
                     "Failed to fetch subscription data from API"
