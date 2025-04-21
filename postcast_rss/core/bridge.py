@@ -195,7 +195,6 @@ class IlPostApi:
                     # If there are more episodes to fetch and we haven't reached the limit
                     if counter < total_items and (hits is None or counter < hits):
                         async for episode in self.recursive_podcast_get(
-                            session=session,
                             podcast=podcast,
                             page=page + 1,
                             counter=counter,
