@@ -132,3 +132,29 @@ async def get_rss_feed(
         raise HTTPException(status_code=404, detail="No episodes found")
 
     return Response(content=feed.to_rss_string(), media_type="application/rss+xml")
+
+
+@router.get("/{slug}/rss-complete")
+async def get_rss_feed_complete(
+    slug: str,
+) -> Response:
+    """
+    This endpoint builds and returns the RSS feed for a given podcast.
+    """
+    # First get podcast info
+    podcasts = await ilpost_api.podcasts
+    podcast_info = podcasts.get(slug, None)
+
+    if podcast_info is None:
+        raise HTTPException(status_code=404, detail="Podcast not found")
+
+    feed = PodcastFeed.model_validate(podcast_info.model_dump())
+
+    # Get episodes
+    async for episode in ilpost_api.recursive_podcast_get(podcast=slug, hits=None):
+        feed.add_episode(episode)
+
+    if len(feed.episodes) == 0:
+        raise HTTPException(status_code=404, detail="No episodes found")
+
+    return Response(content=feed.to_rss_string(), media_type="application/rss+xml")
