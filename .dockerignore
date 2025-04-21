@@ -1,0 +1,15 @@
+# Exclude the project virtual environment from image builds
+.venv
+tests.ipynb
+
+# Exclude sensible files from image builds
+.env
+ilpost_cache.json
+
+# Exclude the .git directory from image builds
+.git
+
+# Exclude python cache files from image builds
+__pycache__/
+*.py[cod]
+*$py.class
