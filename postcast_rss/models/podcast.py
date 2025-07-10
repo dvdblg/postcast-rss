@@ -92,6 +92,18 @@ class PodcastEpisode(BaseModel):
             return None
 
     @computed_field
+    def type(self) -> str:
+        """Return the type of the episode."""
+        if self.special:
+            return "bonus"
+        elif self.number == "Weekend":
+            return "bonus"
+        elif self.number is not None:
+            return "full"
+        else:
+            return "full"
+
+    @computed_field
     @cached_property
     def seconds(self) -> int:
         """Return the duration in seconds."""
@@ -120,6 +132,9 @@ class PodcastEpisode(BaseModel):
         ET.SubElement(item, "title").text = self.title
         ET.SubElement(item, "description").text = self.content_html or ""
         ET.SubElement(item, "itunes:summary").text = self.content_html or ""
+        if isinstance(self.number, int):
+            ET.SubElement(item, "itunes:episode").text = str(self.number)
+        ET.SubElement(item, "itunes:episodeType").text = self.type
 
         # Publication date in RSS format
         if self.date:
@@ -205,9 +220,6 @@ class PodcastFeed(Podcast):
         rss = self.to_rss()
 
         # Generate prettified XML string with declaration
-        xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>\n'
         ET.indent(rss, space="\t", level=0)
-        rss_string = xml_declaration + ET.tostring(
-            rss, encoding="unicode", method="xml"
-        )
+        rss_string = ET.tostring(rss, encoding="unicode", method="xml")
         return rss_string
