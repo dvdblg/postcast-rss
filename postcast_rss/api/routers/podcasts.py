@@ -131,7 +131,9 @@ async def get_rss_feed(
     if len(feed.episodes) == 0:
         raise HTTPException(status_code=404, detail="No episodes found")
 
-    return Response(content=feed.to_rss_string(), media_type="application/rss+xml")
+    return Response(
+        content=feed.to_rss_string(), media_type="application/rss+xml; charset=utf-8"
+    )
 
 
 @router.get("/{slug}/rss-complete")
@@ -157,4 +159,6 @@ async def get_rss_feed_complete(
     if len(feed.episodes) == 0:
         raise HTTPException(status_code=404, detail="No episodes found")
 
-    return Response(content=feed.to_rss_string(), media_type="application/rss+xml")
+    return Response(
+        content=feed.to_rss_string(), media_type="application/rss+xml; charset=utf-8"
+    )
