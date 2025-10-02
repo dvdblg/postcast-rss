@@ -5,6 +5,7 @@ from functools import cached_property
 from typing import Annotated, List, Optional
 
 from pydantic import AfterValidator, BaseModel, HttpUrl, computed_field
+from pydantic.functional_validators import field_validator
 from pydantic_extra_types.color import Color
 
 from ..core.config import settings
@@ -47,6 +48,13 @@ class Podcast(BaseModel):
         if not isinstance(other, Podcast):
             return NotImplemented
         return self.slug == other.slug
+
+    @field_validator("count", mode="before")
+    @classmethod
+    def parse_empty_string_as_none(cls, v):
+        if v == "":
+            return None
+        return v
 
 
 class PodcastEpisode(BaseModel):
