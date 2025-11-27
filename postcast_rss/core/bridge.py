@@ -43,6 +43,7 @@ class IlPostApi:
     def __init__(self):
         self._subscription_cache: Optional[IlPostUserMetadata] = None
         self._podcasts: Dict[str, Podcast] = {}
+        self.user: Optional[IlPostUser] = None
 
     def __str__(self) -> str:
         return f"IlPostApi(token=****, subscribed={self.subscribed})"
@@ -81,9 +82,11 @@ class IlPostApi:
         """
         try:
             self._subscription_cache = read_subscription_cache()
-            if self._subscription_cache.subscription.is_expired:
+            if self._subscription_cache.subscription is None:
+                raise PodcastException("No subscription data found in cache")
+            elif self._subscription_cache.subscription.is_expired:
                 os.remove(settings.ILPOST_SUBSCRIPTION_CACHE_FILE_NAME)
-                raise PodcastException("Subscription expired")
+                raise PodcastException("Cached subscription expired")
             LOG.info("Found valid subscription cache, using it.")
         except (FileNotFoundError, ValueError, PodcastException):
             LOG.info("No valid subscription cache found, logging in.")
@@ -102,8 +105,8 @@ class IlPostApi:
             try:
                 response.raise_for_status()
                 data = response.json()
-                user = IlPostUser.model_validate(data)
-                self._subscription_cache = user.profile.meta
+                self.user = IlPostUser.model_validate(data)
+                self._subscription_cache = self.user.profile.meta
                 LOG.info("Logged in successfully.")
                 write_subscription_cache(self._subscription_cache)
             except (requests.HTTPError, ValueError) as e:
@@ -112,7 +115,7 @@ class IlPostApi:
                 ) from e
 
         if self.is_expired:
-            LOG.warning("Subscription expired")
+            LOG.warning("Subscription expired. Only free content will be accessible.")
         else:
             msg = "Subscription is active"
             if self.subscription.end_date:
@@ -128,7 +131,7 @@ class IlPostApi:
         """
         Get the authentication token for the API.
         """
-        if self.is_expired:
+        if self.user is None or self._subscription_cache is None:
             self.login()
         return self._subscription_cache.token.get_secret_value()
 
