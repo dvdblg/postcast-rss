@@ -32,10 +32,10 @@ class IlPostUserSubscription(BaseModel):
 
 
 class IlPostUserMetadata(BaseModel):
-    issubscriber: bool
-    paying_customer: bool
+    issubscriber: bool = False
+    paying_customer: bool = False
     token: SecretStr
-    subscription: IlPostUserSubscription
+    subscription: IlPostUserSubscription | None = None
 
     @field_validator("subscription", mode="before")
     @classmethod
